@@ -2,7 +2,7 @@ import {
   IJsonRpcResponseSuccess,
   IJsonRpcResponseError,
   IJsonRpcErrorMessage,
-} from "@walletconnect/types";
+} from "@unifiedwalletconnect/types";
 
 export function promisify(
   originalFn: (...args: any[]) => void,

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CARET_SVG_URL } from "../assets/caret";
+import { WALLETCONNECT_CARET_SVG_URL } from "../assets/caret";
 
 interface WalletButtonProps {
   color: string;
@@ -25,7 +25,7 @@ function WalletButton(props: WalletButtonProps) {
           className={`walletconnect-modal__base__row__right__app-icon`}
           style={{ background: `url('${logo}') ${color}`, backgroundSize: "100%" }}
         ></div>
-        <img src={CARET_SVG_URL} className="walletconnect-modal__base__row__right__caret" />
+        <img src={WALLETCONNECT_CARET_SVG_URL} className="walletconnect-modal__base__row__right__caret" />
       </div>
     </a>
   );

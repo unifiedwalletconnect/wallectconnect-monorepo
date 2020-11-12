@@ -1,4 +1,4 @@
-declare module "@walletconnect/types" {
+declare module "@unifiedwalletconnect/types" {
   export interface IConnector {
     bridge: string;
     key: string;
@@ -18,19 +18,13 @@ declare module "@walletconnect/types" {
     session: IWalletConnectSession;
 
     on(event: string, callback: (error: Error | null, payload: any | null) => void): void;
+    createInstantRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
     connect(opts?: ICreateSessionOptions): Promise<ISessionStatus>;
     createSession(opts?: ICreateSessionOptions): Promise<void>;
     approveSession(sessionStatus: ISessionStatus): void;
     rejectSession(sessionError?: ISessionError): void;
     updateSession(sessionStatus: ISessionStatus): void;
     killSession(sessionError?: ISessionError): Promise<void>;
-
-    sendTransaction(tx: ITxData): Promise<any>;
-    signTransaction(tx: ITxData): Promise<any>;
-    signMessage(params: any[]): Promise<any>;
-    signPersonalMessage(params: any[]): Promise<any>;
-    signTypedData(params: any[]): Promise<any>;
-    updateChain(chainParams: IUpdateChainParams): Promise<any>;
 
     sendCustomRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
     unsafeSend(
@@ -120,20 +114,6 @@ declare module "@walletconnect/types" {
     params: any;
   }
 
-  export interface ICallTxData {
-    to?: string;
-    value?: number | string;
-    gas?: number | string;
-    gasLimit?: number | string;
-    gasPrice?: number | string;
-    nonce?: number | string;
-    data?: string;
-  }
-
-  export interface ITxData extends ICallTxData {
-    from: string;
-  }
-
   export interface IJsonRpcResponseSuccess {
     id: number;
     jsonrpc: string;
@@ -170,15 +150,6 @@ declare module "@walletconnect/types" {
     | IJsonRpcSubscription
     | IJsonRpcResponseSuccess
     | IJsonRpcResponseError;
-
-  export type IErrorCallback = (err: Error | null, data?: any) => void;
-
-  export type ICallback = () => void;
-
-  export interface IError extends Error {
-    res?: any;
-    code?: any;
-  }
 
   export interface IClientMeta {
     description: string;
@@ -252,21 +223,12 @@ declare module "@walletconnect/types" {
     pushServerOpts?: IPushServerOptions;
   }
 
-  export interface INodeJSOptions {
-    clientMeta: IClientMeta;
-  }
-
   export interface IPushServerOptions {
     url: string;
     type: string;
     token: string;
     peerMeta?: boolean;
     language?: string;
-  }
-
-  export interface INativeWalletOptions {
-    clientMeta: IClientMeta;
-    push?: IPushServerOptions | null;
   }
 
   export interface IPushSubscription {
@@ -278,47 +240,9 @@ declare module "@walletconnect/types" {
     language: string;
   }
 
-  export interface IUpdateChainParams {
-    chainId: number;
-    networkId: number;
-    rpcUrl: string;
-    nativeCurrency: {
-      name: string;
-      symbol: string;
-    };
-  }
-
-  export interface IRPCMap {
-    [chainId: number]: string;
-  }
-
-  export interface IWCRpcConnectionOptions {
-    connector?: IConnector;
-    bridge?: string;
-    qrcode?: boolean;
-    chainId?: number;
-    qrcodeModalOptions?: IQRCodeModalOptions;
-  }
-
-  export interface IWCEthRpcConnectionOptions extends IWCRpcConnectionOptions {
-    rpc?: IRPCMap;
-    infuraId?: string;
-  }
-
-  export interface IWalletConnectStarkwareProviderOptions extends IWCRpcConnectionOptions {
-    contractAddress: string;
-  }
-
-  export interface IWalletConnectSDKOptions extends IWalletConnectOptions {
-    bridge?: string;
-  }
-
-  export interface IWalletConnectProviderOptions extends IWCEthRpcConnectionOptions {
-    pollingInterval?: number;
-  }
-
   export interface IRequestOptions {
     forcePushNotification?: boolean;
+    signingRequest?: boolean;
   }
 
   export interface IInternalRequestOptions extends IRequestOptions {
@@ -327,26 +251,6 @@ declare module "@walletconnect/types" {
 
   export interface ICreateSessionOptions {
     chainId?: number;
-  }
-
-  export interface IRpcConnection extends NodeJS.EventEmitter {
-    connected: boolean;
-
-    send(payload: any): Promise<any>;
-    open(): Promise<void>;
-    close(): Promise<void>;
-  }
-
-  export interface IWCRpcConnection extends IRpcConnection {
-    bridge: string;
-    qrcode: boolean;
-    wc: IConnector | null;
-    connected: boolean;
-
-    create(chainId?: number): void;
-    onClose(): void;
-    onError(payload: any, message: string, code?: number): void;
-    sendPayload(payload: any): Promise<IJsonRpcResponseSuccess | IJsonRpcResponseError>;
   }
 
   export interface IQRCodeModal {

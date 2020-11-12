@@ -1,6 +1,6 @@
 import * as React from "react";
-import { isMobile } from "@walletconnect/utils";
-import { IQRCodeModalOptions } from "@walletconnect/types";
+import { isMobile } from "@unifiedwalletconnect/utils";
+import { IQRCodeModalOptions } from "@unifiedwalletconnect/types";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Header from "./Header";

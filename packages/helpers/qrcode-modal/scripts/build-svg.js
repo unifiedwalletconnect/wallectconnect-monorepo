@@ -16,7 +16,7 @@ buildAsset({
 buildAsset({
   assetFile: "caret.svg",
   targetFile: "caret.ts",
-  targetVar: "CARET_SVG_URL",
+  targetVar: "WALLETCONNECT_CARET_SVG_URL",
   loader: input =>
     svgUrlLoader(input)
       .replace(`module.exports = "`, "")

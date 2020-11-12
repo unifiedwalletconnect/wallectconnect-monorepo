@@ -1,1 +1,1 @@
-declare module "@walletconnect/utils"
+declare module "@unifiedwalletconnect/utils"

@@ -1,7 +1,6 @@
 export * from "./browser";
 export * from "./constants";
 export * from "./encoding";
-export * from "./ethereum";
 export * from "./local";
 export * from "./misc";
 export * from "./payload";

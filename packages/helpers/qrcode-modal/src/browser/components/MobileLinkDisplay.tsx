@@ -1,6 +1,6 @@
 import * as React from "react";
-import { IMobileRegistryEntry, IQRCodeModalOptions } from "@walletconnect/types";
-import { isIOS, mobileLinkChoiceKey, setLocal } from "@walletconnect/utils";
+import { IMobileRegistryEntry, IQRCodeModalOptions } from "@unifiedwalletconnect/types";
+import { isIOS, mobileLinkChoiceKey, setLocal } from "@unifiedwalletconnect/utils";
 
 import { DEFAULT_BUTTON_COLOR, WALLETCONNECT_CTA_TEXT_ID } from "../constants";
 

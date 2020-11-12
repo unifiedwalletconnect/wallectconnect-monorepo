@@ -2,7 +2,7 @@
 import * as React from "react";
 // @ts-ignore
 import * as ReactDOM from "react-dom";
-import { getDocumentOrThrow, getNavigatorOrThrow } from "@walletconnect/utils";
+import { getDocumentOrThrow, getNavigatorOrThrow } from "@unifiedwalletconnect/utils";
 
 import { WALLETCONNECT_STYLE_SHEET } from "./assets/style";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -14,7 +14,7 @@ import {
   WALLETCONNECT_MODAL_ID,
   WALLETCONNECT_STYLE_ID,
 } from "./constants";
-import { IQRCodeModalOptions } from "@walletconnect/types";
+import { IQRCodeModalOptions } from "@unifiedwalletconnect/types";
 import { TextMap } from "./types";
 
 function injectStyleSheet() {

@@ -11,11 +11,9 @@ import {
   IJsonRpcResponseSuccess,
   IJsonRpcResponseError,
   IJsonRpcRequest,
-  ITxData,
   IClientMeta,
   IParseURIResult,
   ISessionParams,
-  IUpdateChainParams,
   IRequestOptions,
   IInternalRequestOptions,
   ICreateSessionOptions,
@@ -24,10 +22,8 @@ import {
   IPushServerOptions,
   IWalletConnectSession,
   IQRCodeModalOptions,
-} from "@walletconnect/types";
+} from "@unifiedwalletconnect/types";
 import {
-  parsePersonalSign,
-  parseTransactionData,
   convertArrayBufferToHex,
   convertHexToArrayBuffer,
   getClientMeta,
@@ -35,17 +31,14 @@ import {
   uuid,
   formatRpcError,
   parseWalletConnectUri,
-  convertNumberToHex,
   isJsonRpcResponseSuccess,
   isJsonRpcResponseError,
-  isSilentPayload,
   getLocal,
-  signingMethods,
   mobileLinkChoiceKey,
   isMobile,
   removeLocal,
-} from "@walletconnect/utils";
-import SocketTransport from "@walletconnect/socket-transport";
+} from "@unifiedwalletconnect/utils";
+import SocketTransport from "@unifiedwalletconnect/socket-transport";
 import {
   ERROR_SESSION_CONNECTED,
   ERROR_SESSION_DISCONNECTED,
@@ -67,7 +60,7 @@ import SessionStorage from "./storage";
 // -- Connector ------------------------------------------------------------ //
 
 class Connector implements IConnector {
-  public readonly protocol = "wc";
+  public readonly protocol = "uwc";
   public readonly version = 1;
 
   // -- connection ----------------------------------------------------- //
@@ -369,7 +362,7 @@ class Connector implements IConnector {
     this._eventManager.subscribe(eventEmitter);
   }
 
-  public async createInstantRequest(instantRequest: Partial<IJsonRpcRequest>): Promise<void> {
+  public async createInstantRequest(instantRequest: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<void> {
     this._key = await this._generateKey();
 
     const request: IJsonRpcRequest = this._formatRequest({
@@ -400,7 +393,7 @@ class Connector implements IConnector {
     };
 
     try {
-      const result = await this._sendCallRequest(request);
+      const result = await this._sendCallRequest(request, options);
 
       if (result) {
         endInstantRequest();
@@ -603,96 +596,6 @@ class Connector implements IConnector {
     this._handleSessionDisconnect(message);
   }
 
-  public async sendTransaction(tx: ITxData) {
-    if (!this._connected) {
-      throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    const parsedTx = parseTransactionData(tx);
-
-    const request = this._formatRequest({
-      method: "eth_sendTransaction",
-      params: [parsedTx],
-    });
-
-    const result = await this._sendCallRequest(request);
-    return result;
-  }
-
-  public async signTransaction(tx: ITxData) {
-    if (!this._connected) {
-      throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    const parsedTx = parseTransactionData(tx);
-
-    const request = this._formatRequest({
-      method: "eth_signTransaction",
-      params: [parsedTx],
-    });
-
-    const result = await this._sendCallRequest(request);
-    return result;
-  }
-
-  public async signMessage(params: any[]) {
-    if (!this._connected) {
-      throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    const request = this._formatRequest({
-      method: "eth_sign",
-      params,
-    });
-
-    const result = await this._sendCallRequest(request);
-    return result;
-  }
-
-  public async signPersonalMessage(params: any[]) {
-    if (!this._connected) {
-      throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    params = parsePersonalSign(params);
-
-    const request = this._formatRequest({
-      method: "personal_sign",
-      params,
-    });
-
-    const result = await this._sendCallRequest(request);
-    return result;
-  }
-
-  public async signTypedData(params: any[]) {
-    if (!this._connected) {
-      throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    const request = this._formatRequest({
-      method: "eth_signTypedData",
-      params,
-    });
-
-    const result = await this._sendCallRequest(request);
-    return result;
-  }
-
-  public async updateChain(chainParams: IUpdateChainParams) {
-    if (!this._connected) {
-      throw new Error("Session currently disconnected");
-    }
-
-    const request = this._formatRequest({
-      method: "wallet_updateChain",
-      params: [chainParams],
-    });
-
-    const result = await this._sendCallRequest(request);
-    return result;
-  }
-
   public unsafeSend(
     request: IJsonRpcRequest,
     options?: IRequestOptions,
@@ -716,26 +619,6 @@ class Connector implements IConnector {
   public async sendCustomRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions) {
     if (!this._connected) {
       throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    switch (request.method) {
-      case "eth_accounts":
-        return this.accounts;
-      case "eth_chainId":
-        return convertNumberToHex(this.chainId);
-      case "eth_sendTransaction":
-      case "eth_signTransaction":
-        if (request.params) {
-          request.params[0] = parseTransactionData(request.params[0]);
-        }
-        break;
-      case "personal_sign":
-        if (request.params) {
-          request.params = parsePersonalSign(request.params);
-        }
-        break;
-      default:
-        break;
     }
 
     const formattedRequest = this._formatRequest(request);
@@ -777,7 +660,7 @@ class Connector implements IConnector {
     const silent =
       typeof options?.forcePushNotification !== "undefined"
         ? !options.forcePushNotification
-        : isSilentPayload(callRequest);
+        : !options?.signingRequest;
 
     this._transport.send(payload, topic, silent);
   }
@@ -803,7 +686,7 @@ class Connector implements IConnector {
 
   protected _sendCallRequest(request: IJsonRpcRequest, options?: IRequestOptions): Promise<any> {
     this._sendRequest(request, options);
-    if (isMobile() && signingMethods.includes(request.method)) {
+    if (isMobile() && options?.signingRequest) {
       const mobileLinkUrl = getLocal(mobileLinkChoiceKey);
       if (mobileLinkUrl) {
         window.location.href = mobileLinkUrl.href;

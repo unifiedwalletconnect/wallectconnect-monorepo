@@ -4,7 +4,7 @@ import {
   INetworkMonitor,
   ITransportLib,
   ISocketTransportOptions,
-} from "@walletconnect/types";
+} from "@unifiedwalletconnect/types";
 import NetworkMonitor from "./network";
 
 // @ts-ignore

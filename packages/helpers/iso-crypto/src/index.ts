@@ -4,7 +4,7 @@ import {
   IJsonRpcResponseSuccess,
   IJsonRpcResponseError,
   IEncryptionPayload,
-} from "@walletconnect/types";
+} from "@unifiedwalletconnect/types";
 import {
   convertArrayBufferToBuffer,
   convertUtf8ToBuffer,
@@ -14,7 +14,7 @@ import {
   concatBuffers,
   removeHexPrefix,
   convertBufferToArrayBuffer,
-} from "@walletconnect/utils";
+} from "@unifiedwalletconnect/utils";
 
 export async function generateKey(length?: number): Promise<ArrayBuffer> {
   const _length = (length || 256) / 8;

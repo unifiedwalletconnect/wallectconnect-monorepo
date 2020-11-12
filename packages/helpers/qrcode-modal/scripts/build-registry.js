@@ -5,7 +5,7 @@ const buildAsset = require("./build-asset");
 const { readFile } = require("../../../../scripts/shared");
 
 const PKG_DIR = path.join(__dirname, "../");
-const REGISTRY_DIR = path.join(PKG_DIR, "node_modules", "@walletconnect", "mobile-registry");
+const REGISTRY_DIR = path.join(PKG_DIR, "node_modules", "@unifiedwalletconnect", "mobile-registry");
 
 const registryLoader = input => {
   const array = JSON.parse(input.toString("utf8"));

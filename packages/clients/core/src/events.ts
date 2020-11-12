@@ -4,14 +4,14 @@ import {
   isJsonRpcResponseError,
   isInternalEvent,
   isReservedEvent,
-} from "@walletconnect/utils";
+} from "@unifiedwalletconnect/utils";
 import {
   IInternalEvent,
   IJsonRpcResponseSuccess,
   IJsonRpcResponseError,
   IJsonRpcRequest,
   IEventEmitter,
-} from "@walletconnect/types";
+} from "@unifiedwalletconnect/types";
 
 // -- EventManager --------------------------------------------------------- //
 

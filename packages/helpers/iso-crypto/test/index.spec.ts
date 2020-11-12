@@ -1,5 +1,5 @@
-import { IJsonRpcRequest, IEncryptionPayload } from "@walletconnect/types";
-import { convertHexToArrayBuffer } from "@walletconnect/utils";
+import { IJsonRpcRequest, IEncryptionPayload } from "@unifiedwalletconnect/types";
+import { convertHexToArrayBuffer } from "@unifiedwalletconnect/utils";
 
 import * as IsoCrypto from "../src";
 
