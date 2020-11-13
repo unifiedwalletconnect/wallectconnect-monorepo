@@ -89,7 +89,7 @@ class HealthChecker {
     this.responder.on("ping", (err, payload) => {
       this.onPing(err, payload);
     });
-    this.responder.createSession();
+    this.responder.createSession({ chain: "ETH" });
   }
 
   /**
@@ -107,9 +107,9 @@ class HealthChecker {
 
     // Use dummy chain parameters, as we are not really connected to any blockchain
     const approvalParams = {
-      chainId: 0,
+      chain: "ETH",
+      network: "mainnet",
       accounts: [],
-      networkId: 0,
     };
 
     this.responder.approveSession(approvalParams);
@@ -186,7 +186,7 @@ class HealthChecker {
       this.onSessionUpdate(err, payload);
     });
     this.log("Creating session");
-    this.initiator.createSession();
+    this.initiator.createSession({ chain: "ETH" });
   }
 
   /**

@@ -3,28 +3,28 @@ declare module "@unifiedwalletconnect/types" {
     bridge: string;
     key: string;
     clientId: string;
-    peerId: string;
     readonly clientMeta: IClientMeta | null;
+    peerId: string;
     peerMeta: IClientMeta | null;
     handshakeTopic: string;
     handshakeId: number;
     uri: string;
-    chainId: number;
-    networkId: number;
-    accounts: string[];
+    chain: string;
+    network: string;
     rpcUrl: string;
+    accounts: string[];
     readonly connected: boolean;
     readonly pending: boolean;
     session: IWalletConnectSession;
 
     on(event: string, callback: (error: Error | null, payload: any | null) => void): void;
-    createInstantRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
-    connect(opts?: ICreateSessionOptions): Promise<ISessionStatus>;
-    createSession(opts?: ICreateSessionOptions): Promise<void>;
+    connect(opts: ICreateSessionOptions): Promise<ISessionStatus>;
+    createSession(opts: ICreateSessionOptions): Promise<void>;
     approveSession(sessionStatus: ISessionStatus): void;
     rejectSession(sessionError?: ISessionError): void;
     updateSession(sessionStatus: ISessionStatus): void;
     killSession(sessionError?: ISessionError): Promise<void>;
+    createInstantRequest(opts: ICreateSessionOptions, request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
 
     sendCustomRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
     unsafeSend(
@@ -99,10 +99,10 @@ declare module "@unifiedwalletconnect/types" {
   }
 
   export interface ISessionStatus {
-    chainId: number;
-    accounts: string[];
-    networkId?: number;
+    chain: string;
+    network: string;
     rpcUrl?: string;
+    accounts: string[];
   }
 
   export interface ISessionError {
@@ -183,18 +183,20 @@ declare module "@unifiedwalletconnect/types" {
 
   export interface ISessionParams {
     approved: boolean;
-    chainId: number | null;
-    networkId: number | null;
-    accounts: string[] | null;
-    rpcUrl?: string | null;
-    peerId?: string | null;
-    peerMeta?: IClientMeta | null;
+    chain: string;
+    network: string;
+    rpcUrl: string;
+    accounts: string[];
+    peerId: string;
+    peerMeta: IClientMeta | null;
   }
 
   export interface IWalletConnectSession {
     connected: boolean;
+    chain: string;
+    network: string;
+    rpcUrl: string;
     accounts: string[];
-    chainId: number;
     bridge: string;
     key: string;
     clientId: string;
@@ -250,7 +252,7 @@ declare module "@unifiedwalletconnect/types" {
   }
 
   export interface ICreateSessionOptions {
-    chainId?: number;
+    chain: string;
   }
 
   export interface IQRCodeModal {

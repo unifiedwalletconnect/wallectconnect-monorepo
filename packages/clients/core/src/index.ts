@@ -86,10 +86,10 @@ class Connector implements IConnector {
   // -- session ----------------------------------------------------- //
 
   private _connected = false;
-  private _accounts: string[] = [];
-  private _chainId = 0;
-  private _networkId = 0;
+  private _chain = "";
+  private _network = "";
   private _rpcUrl = "";
+  private _accounts: string[] = [];
 
   // -- controllers ----------------------------------------------------- //
 
@@ -226,8 +226,7 @@ class Connector implements IConnector {
   }
 
   get peerMeta() {
-    const peerMeta: IClientMeta | null = this._peerMeta;
-    return peerMeta;
+    return this._peerMeta;
   }
 
   set handshakeTopic(value) {
@@ -267,31 +266,20 @@ class Connector implements IConnector {
     this.key = key;
   }
 
-  set chainId(value) {
-    this._chainId = value;
+  set chain(value) {
+    this._chain = value;
   }
 
-  get chainId() {
-    const chainId: number | null = this._chainId;
-    return chainId;
+  get chain() {
+    return this._chain;
   }
 
-  set networkId(value) {
-    this._networkId = value;
+  set network(value) {
+    this._network = value;
   }
 
-  get networkId() {
-    const networkId: number | null = this._networkId;
-    return networkId;
-  }
-
-  set accounts(value) {
-    this._accounts = value;
-  }
-
-  get accounts() {
-    const accounts: string[] | null = this._accounts;
-    return accounts;
+  get network() {
+    return this._network;
   }
 
   set rpcUrl(value) {
@@ -299,8 +287,15 @@ class Connector implements IConnector {
   }
 
   get rpcUrl() {
-    const rpcUrl: string | null = this._rpcUrl;
-    return rpcUrl;
+    return this._rpcUrl;
+  }
+
+  set accounts(value) {
+    this._accounts = value;
+  }
+
+  get accounts() {
+    return this._accounts;
   }
 
   set connected(value) {
@@ -322,8 +317,10 @@ class Connector implements IConnector {
   get session() {
     return {
       connected: this.connected,
+      chain: this.chain,
+      network: this.network,
+      rpcUrl: this.rpcUrl,
       accounts: this.accounts,
-      chainId: this.chainId,
       bridge: this.bridge,
       key: this.key,
       clientId: this.clientId,
@@ -340,8 +337,10 @@ class Connector implements IConnector {
       return;
     }
     this._connected = value.connected;
+    this.chain = value.chain;
+    this.network = value.network;
+    this.rpcUrl = value.rpcUrl;
     this.accounts = value.accounts;
-    this.chainId = value.chainId;
     this.bridge = value.bridge;
     this.key = value.key;
     this.clientId = value.clientId;
@@ -362,7 +361,208 @@ class Connector implements IConnector {
     this._eventManager.subscribe(eventEmitter);
   }
 
-  public async createInstantRequest(instantRequest: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<void> {
+  public connect(opts: ICreateSessionOptions): Promise<ISessionStatus> {
+    if (!this._qrcodeModal) {
+      throw new Error(ERROR_QRCODE_MODAL_NOT_PROVIDED);
+    }
+    return new Promise(async (resolve, reject) => {
+      if (this.connected) {
+        resolve({
+          chain: this.chain,
+          network: this.network,
+          rpcUrl: this.rpcUrl,
+          accounts: this.accounts,
+        });
+      }
+      if (!this.connected) {
+        try {
+          await this.createSession(opts);
+        } catch (error) {
+          reject(error);
+        }
+      }
+
+      this.on("modal_closed", () => reject(new Error(ERROR_QRCODE_MODAL_USER_CLOSED)));
+
+      this.on("connect", (error, payload) => {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(payload.params[0]);
+      });
+    });
+  }
+
+  public async createSession(opts: ICreateSessionOptions): Promise<void> {
+    if (this._connected) {
+      throw new Error(ERROR_SESSION_CONNECTED);
+    }
+
+    if (this.pending) {
+      return;
+    }
+
+    this._key = await this._generateKey();
+
+    const request: IJsonRpcRequest = this._formatRequest({
+      method: "wc_sessionRequest",
+      params: [
+        {
+          peerId: this.clientId,
+          peerMeta: this.clientMeta,
+          chain: opts.chain,
+        },
+      ],
+    });
+
+    this.handshakeId = request.id;
+    this.handshakeTopic = uuid();
+
+    this._sendSessionRequest(request, "Session update rejected", {
+      topic: this.handshakeTopic,
+    });
+
+    this._eventManager.trigger({
+      event: "display_uri",
+      params: [this.uri],
+    });
+  }
+
+  public approveSession(sessionStatus: ISessionStatus) {
+    if (this._connected) {
+      throw new Error(ERROR_SESSION_CONNECTED);
+    }
+
+    this.chain = sessionStatus.chain;
+    this.network = sessionStatus.network;
+    this.rpcUrl = sessionStatus.rpcUrl || "";
+    this.accounts = sessionStatus.accounts;
+
+    const sessionParams: ISessionParams = {
+      approved: true,
+      chain: this.chain,
+      network: this.network,
+      rpcUrl: this.rpcUrl,
+      accounts: this.accounts,
+      peerId: this.clientId,
+      peerMeta: this.clientMeta,
+    };
+
+    const response = {
+      id: this.handshakeId,
+      jsonrpc: "2.0",
+      result: sessionParams,
+    };
+
+    this._sendResponse(response);
+
+    this._connected = true;
+    this._setStorageSession();
+    this._eventManager.trigger({
+      event: "connect",
+      params: [
+        {
+          peerId: this.peerId,
+          peerMeta: this.peerMeta,
+          chain: this.chain,
+          network: this.network,
+          rpcUrl: this.rpcUrl,
+          accounts: this.accounts,
+        },
+      ],
+    });
+  }
+
+  public rejectSession(sessionError?: ISessionError) {
+    if (this._connected) {
+      throw new Error(ERROR_SESSION_CONNECTED);
+    }
+
+    const message =
+      sessionError && sessionError.message ? sessionError.message : ERROR_SESSION_REJECTED;
+
+    const response = this._formatResponse({
+      id: this.handshakeId,
+      error: { message },
+    });
+
+    this._sendResponse(response);
+
+    this._connected = false;
+    this._eventManager.trigger({
+      event: "disconnect",
+      params: [{ message }],
+    });
+    this._removeStorageSession();
+  }
+
+  public updateSession(sessionStatus: ISessionStatus) {
+    if (!this._connected) {
+      throw new Error(ERROR_SESSION_DISCONNECTED);
+    }
+
+    this.chain = sessionStatus.chain;
+    this.network = sessionStatus.network;
+    this.rpcUrl = sessionStatus.rpcUrl || "";
+    this.accounts = sessionStatus.accounts;
+
+    const sessionParams: ISessionParams = {
+      approved: true,
+      chain: this.chain,
+      network: this.network,
+      rpcUrl: this.rpcUrl,
+      accounts: this.accounts,
+      peerId: this.clientId,
+      peerMeta: this.clientMeta,
+    };
+
+    const request = this._formatRequest({
+      method: "wc_sessionUpdate",
+      params: [sessionParams],
+    });
+
+    this._sendSessionRequest(request, "Session update rejected");
+
+    this._eventManager.trigger({
+      event: "session_update",
+      params: [
+        {
+          chain: this.chain,
+          network: this.network,
+          rpcUrl: this.rpcUrl,
+          accounts: this.accounts,
+        },
+      ],
+    });
+
+    this._manageStorageSession();
+  }
+
+  public async killSession(sessionError?: ISessionError) {
+    const message = sessionError ? sessionError.message : "Session Disconnected";
+
+    const sessionParams: ISessionParams = {
+      approved: false,
+      chain: "",
+      network: "",
+      accounts: [],
+      rpcUrl: "",
+      peerId: "",
+      peerMeta: null,
+    };
+
+    const request = this._formatRequest({
+      method: "wc_sessionUpdate",
+      params: [sessionParams],
+    });
+
+    await this._sendRequest(request);
+
+    this._handleSessionDisconnect(message);
+  }
+
+  public async createInstantRequest(opts: ICreateSessionOptions, instantRequest: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<void> {
     this._key = await this._generateKey();
 
     const request: IJsonRpcRequest = this._formatRequest({
@@ -371,6 +571,7 @@ class Connector implements IConnector {
         {
           peerId: this.clientId,
           peerMeta: this.clientMeta,
+          chain: opts.chain,
           request: this._formatRequest(instantRequest),
         },
       ],
@@ -406,194 +607,15 @@ class Connector implements IConnector {
     }
   }
 
-  public connect(opts?: ICreateSessionOptions): Promise<ISessionStatus> {
-    if (!this._qrcodeModal) {
-      throw new Error(ERROR_QRCODE_MODAL_NOT_PROVIDED);
-    }
-    return new Promise(async (resolve, reject) => {
-      if (this.connected) {
-        resolve({
-          chainId: this.chainId,
-          accounts: this.accounts,
-        });
-      }
-      if (!this.connected) {
-        try {
-          await this.createSession(opts);
-        } catch (error) {
-          reject(error);
-        }
-      }
-
-      this.on("modal_closed", () => reject(new Error(ERROR_QRCODE_MODAL_USER_CLOSED)));
-
-      this.on("connect", (error, payload) => {
-        if (error) {
-          return reject(error);
-        }
-
-        resolve(payload.params[0]);
-      });
-    });
-  }
-
-  public async createSession(opts?: ICreateSessionOptions): Promise<void> {
-    if (this._connected) {
-      throw new Error(ERROR_SESSION_CONNECTED);
-    }
-
-    if (this.pending) {
-      return;
-    }
-
-    this._key = await this._generateKey();
-
-    const request: IJsonRpcRequest = this._formatRequest({
-      method: "wc_sessionRequest",
-      params: [
-        {
-          peerId: this.clientId,
-          peerMeta: this.clientMeta,
-          chainId: opts && opts.chainId ? opts.chainId : null,
-        },
-      ],
-    });
-
-    this.handshakeId = request.id;
-    this.handshakeTopic = uuid();
-
-    this._sendSessionRequest(request, "Session update rejected", {
-      topic: this.handshakeTopic,
-    });
-
-    this._eventManager.trigger({
-      event: "display_uri",
-      params: [this.uri],
-    });
-  }
-
-  public approveSession(sessionStatus: ISessionStatus) {
-    if (this._connected) {
-      throw new Error(ERROR_SESSION_CONNECTED);
-    }
-
-    this.chainId = sessionStatus.chainId;
-    this.accounts = sessionStatus.accounts;
-    this.networkId = sessionStatus.networkId || 0;
-    this.rpcUrl = sessionStatus.rpcUrl || "";
-
-    const sessionParams: ISessionParams = {
-      approved: true,
-      chainId: this.chainId,
-      networkId: this.networkId,
-      accounts: this.accounts,
-      rpcUrl: this.rpcUrl,
-      peerId: this.clientId,
-      peerMeta: this.clientMeta,
-    };
-
-    const response = {
-      id: this.handshakeId,
-      jsonrpc: "2.0",
-      result: sessionParams,
-    };
-
-    this._sendResponse(response);
-
-    this._connected = true;
-    this._setStorageSession();
-    this._eventManager.trigger({
-      event: "connect",
-      params: [
-        {
-          peerId: this.peerId,
-          peerMeta: this.peerMeta,
-          chainId: this.chainId,
-          accounts: this.accounts,
-        },
-      ],
-    });
-  }
-
-  public rejectSession(sessionError?: ISessionError) {
-    if (this._connected) {
-      throw new Error(ERROR_SESSION_CONNECTED);
-    }
-
-    const message =
-      sessionError && sessionError.message ? sessionError.message : ERROR_SESSION_REJECTED;
-
-    const response = this._formatResponse({
-      id: this.handshakeId,
-      error: { message },
-    });
-
-    this._sendResponse(response);
-
-    this._connected = false;
-    this._eventManager.trigger({
-      event: "disconnect",
-      params: [{ message }],
-    });
-    this._removeStorageSession();
-  }
-
-  public updateSession(sessionStatus: ISessionStatus) {
+  public async sendCustomRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions) {
     if (!this._connected) {
       throw new Error(ERROR_SESSION_DISCONNECTED);
     }
 
-    this.chainId = sessionStatus.chainId;
-    this.accounts = sessionStatus.accounts;
-    this.networkId = sessionStatus.networkId || 0;
-    this.rpcUrl = sessionStatus.rpcUrl || "";
+    const formattedRequest = this._formatRequest(request);
 
-    const sessionParams: ISessionParams = {
-      approved: true,
-      chainId: this.chainId,
-      networkId: this.networkId,
-      accounts: this.accounts,
-      rpcUrl: this.rpcUrl,
-    };
-
-    const request = this._formatRequest({
-      method: "wc_sessionUpdate",
-      params: [sessionParams],
-    });
-
-    this._sendSessionRequest(request, "Session update rejected");
-
-    this._eventManager.trigger({
-      event: "session_update",
-      params: [
-        {
-          chainId: this.chainId,
-          accounts: this.accounts,
-        },
-      ],
-    });
-
-    this._manageStorageSession();
-  }
-
-  public async killSession(sessionError?: ISessionError) {
-    const message = sessionError ? sessionError.message : "Session Disconnected";
-
-    const sessionParams: ISessionParams = {
-      approved: false,
-      chainId: null,
-      networkId: null,
-      accounts: null,
-    };
-
-    const request = this._formatRequest({
-      method: "wc_sessionUpdate",
-      params: [sessionParams],
-    });
-
-    await this._sendRequest(request);
-
-    this._handleSessionDisconnect(message);
+    const result = await this._sendCallRequest(formattedRequest, options);
+    return result;
   }
 
   public unsafeSend(
@@ -614,17 +636,6 @@ class Connector implements IConnector {
         resolve(payload);
       });
     });
-  }
-
-  public async sendCustomRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions) {
-    if (!this._connected) {
-      throw new Error(ERROR_SESSION_DISCONNECTED);
-    }
-
-    const formattedRequest = this._formatRequest(request);
-
-    const result = await this._sendCallRequest(formattedRequest, options);
-    return result;
   }
 
   public approveRequest(response: Partial<IJsonRpcResponseSuccess>) {
@@ -763,21 +774,12 @@ class Connector implements IConnector {
         if (!this._connected) {
           this._connected = true;
 
-          if (sessionParams.chainId) {
-            this.chainId = sessionParams.chainId;
-          }
-
-          if (sessionParams.accounts) {
-            this.accounts = sessionParams.accounts;
-          }
-
-          if (sessionParams.peerId && !this.peerId) {
-            this.peerId = sessionParams.peerId;
-          }
-
-          if (sessionParams.peerMeta && !this.peerMeta) {
-            this.peerMeta = sessionParams.peerMeta;
-          }
+          this.chain = sessionParams.chain;
+          this.network = sessionParams.network;
+          this.rpcUrl = sessionParams.rpcUrl;
+          this.accounts = sessionParams.accounts;
+          this.peerId = sessionParams.peerId;
+          this.peerMeta = sessionParams.peerMeta;
 
           this._eventManager.trigger({
             event: "connect",
@@ -785,24 +787,26 @@ class Connector implements IConnector {
               {
                 peerId: this.peerId,
                 peerMeta: this.peerMeta,
-                chainId: this.chainId,
+                chain: this.chain,
+                network: this.network,
+                rpcUrl: this.rpcUrl,
                 accounts: this.accounts,
               },
             ],
           });
         } else {
-          if (sessionParams.chainId) {
-            this.chainId = sessionParams.chainId;
-          }
-          if (sessionParams.accounts) {
-            this.accounts = sessionParams.accounts;
-          }
+          this.chain = sessionParams.chain;
+          this.network = sessionParams.network;
+          this.rpcUrl = sessionParams.rpcUrl;
+          this.accounts = sessionParams.accounts;
 
           this._eventManager.trigger({
             event: "session_update",
             params: [
               {
-                chainId: this.chainId,
+                chain: this.chain,
+                network: this.network,
+                rpcUrl: this.rpcUrl,
                 accounts: this.accounts,
               },
             ],
