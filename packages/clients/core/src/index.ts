@@ -502,7 +502,6 @@ class Connector implements IConnector {
       throw new Error(ERROR_SESSION_DISCONNECTED);
     }
 
-    this.chain = sessionStatus.chain;
     this.network = sessionStatus.network;
     this.rpcUrl = sessionStatus.rpcUrl || "";
     this.accounts = sessionStatus.accounts;
@@ -528,7 +527,6 @@ class Connector implements IConnector {
       event: "session_update",
       params: [
         {
-          chain: this.chain,
           network: this.network,
           rpcUrl: this.rpcUrl,
           accounts: this.accounts,
@@ -795,7 +793,6 @@ class Connector implements IConnector {
             ],
           });
         } else {
-          this.chain = sessionParams.chain;
           this.network = sessionParams.network;
           this.rpcUrl = sessionParams.rpcUrl;
           this.accounts = sessionParams.accounts;
@@ -804,7 +801,6 @@ class Connector implements IConnector {
             event: "session_update",
             params: [
               {
-                chain: this.chain,
                 network: this.network,
                 rpcUrl: this.rpcUrl,
                 accounts: this.accounts,

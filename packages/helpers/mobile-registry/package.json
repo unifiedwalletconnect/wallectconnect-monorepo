@@ -1,6 +1,6 @@
 {
   "name": "@unifiedwalletconnect/mobile-registry",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "description": "Registry for WalletConnect mobile-to-mobile linking supported Wallets",
   "scripts": {
     "build": "node ./scripts/parse.js"
