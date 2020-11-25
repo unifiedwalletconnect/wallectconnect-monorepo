@@ -1,6 +1,6 @@
 {
   "name": "@unifiedwalletconnect/core",
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-alpha.4",
   "description": "Core Library for WalletConnect",
   "scripts": {
     "clean": "rm -rf dist",
@@ -55,9 +55,9 @@
     "webpack-cli": "3.3.10"
   },
   "dependencies": {
-    "@unifiedwalletconnect/socket-transport": "^1.0.0-alpha.2",
-    "@unifiedwalletconnect/types": "^1.0.0-alpha.2",
-    "@unifiedwalletconnect/utils": "^1.0.0-alpha.2"
+    "@unifiedwalletconnect/socket-transport": "^1.0.0-alpha.4",
+    "@unifiedwalletconnect/types": "^1.0.0-alpha.4",
+    "@unifiedwalletconnect/utils": "^1.0.0-alpha.4"
   },
   "gitHead": "165f7993c2acc907c653c02847fb02721052c6e7"
 }

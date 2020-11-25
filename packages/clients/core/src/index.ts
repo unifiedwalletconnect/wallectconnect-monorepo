@@ -666,10 +666,7 @@ class Connector implements IConnector {
 
     const topic: string = typeof options?.topic !== "undefined" ? options.topic : this.peerId;
     const payload: string = JSON.stringify(encryptionPayload);
-    const silent =
-      typeof options?.forcePushNotification !== "undefined"
-        ? !options.forcePushNotification
-        : !options?.signingRequest;
+    const silent = !options?.useNotification;
 
     this._transport.send(payload, topic, silent);
   }
@@ -695,7 +692,7 @@ class Connector implements IConnector {
 
   protected _sendCallRequest(request: IJsonRpcRequest, options?: IRequestOptions): Promise<any> {
     this._sendRequest(request, options);
-    if (isMobile() && options?.signingRequest) {
+    if (isMobile() && options?.useMobileLink) {
       const mobileLinkUrl = getLocal(mobileLinkChoiceKey);
       if (mobileLinkUrl) {
         window.location.href = mobileLinkUrl.href;

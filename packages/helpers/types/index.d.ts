@@ -243,8 +243,8 @@ declare module "@unifiedwalletconnect/types" {
   }
 
   export interface IRequestOptions {
-    forcePushNotification?: boolean;
-    signingRequest?: boolean;
+    useNotification?: boolean;
+    useMobileLink?: boolean;
   }
 
   export interface IInternalRequestOptions extends IRequestOptions {
