@@ -89,7 +89,7 @@ class HealthChecker {
     this.responder.on("ping", (err, payload) => {
       this.onPing(err, payload);
     });
-    this.responder.createSession({ chain: "ETH" });
+    this.responder.createSession();
   }
 
   /**
@@ -107,7 +107,6 @@ class HealthChecker {
 
     // Use dummy chain parameters, as we are not really connected to any blockchain
     const approvalParams = {
-      chain: "ETH",
       network: "mainnet",
       accounts: [],
     };
@@ -174,6 +173,7 @@ class HealthChecker {
   async start() {
     this.startedAt = new Date();
     this.initiator = this.createConnector({
+      chain: "ETH",
       bridge: "https://bridge.walletconnect.org",
     });
     this.initiator.on("display_uri", (err, payload) => {

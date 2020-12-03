@@ -16,7 +16,6 @@ import {
   ISessionParams,
   IRequestOptions,
   IInternalRequestOptions,
-  ICreateSessionOptions,
   IQRCodeModal,
   IPushSubscription,
   IPushServerOptions,
@@ -111,6 +110,10 @@ class Connector implements IConnector {
     this._sessionStorage = opts.sessionStorage || new SessionStorage();
     this._qrcodeModal = opts.connectorOpts.qrcodeModal;
     this._qrcodeModalOptions = opts.connectorOpts.qrcodeModalOptions;
+
+    if (opts.connectorOpts.chain) {
+      this._chain = opts.connectorOpts.chain;
+    }
 
     if (!opts.connectorOpts.bridge && !opts.connectorOpts.uri && !opts.connectorOpts.session) {
       throw new Error(ERROR_MISSING_REQUIRED);
@@ -260,10 +263,11 @@ class Connector implements IConnector {
     if (!value) {
       return;
     }
-    const { handshakeTopic, bridge, key } = this._parseUri(value);
+    const { handshakeTopic, bridge, key, chain } = this._parseUri(value);
     this.handshakeTopic = handshakeTopic;
     this.bridge = bridge;
     this.key = key;
+    this.chain = chain;
   }
 
   set chain(value) {
@@ -361,14 +365,13 @@ class Connector implements IConnector {
     this._eventManager.subscribe(eventEmitter);
   }
 
-  public connect(opts: ICreateSessionOptions): Promise<ISessionStatus> {
+  public connect(): Promise<ISessionStatus> {
     if (!this._qrcodeModal) {
       throw new Error(ERROR_QRCODE_MODAL_NOT_PROVIDED);
     }
     return new Promise(async (resolve, reject) => {
       if (this.connected) {
         resolve({
-          chain: this.chain,
           network: this.network,
           rpcUrl: this.rpcUrl,
           accounts: this.accounts,
@@ -376,7 +379,7 @@ class Connector implements IConnector {
       }
       if (!this.connected) {
         try {
-          await this.createSession(opts);
+          await this.createSession();
         } catch (error) {
           reject(error);
         }
@@ -394,7 +397,7 @@ class Connector implements IConnector {
     });
   }
 
-  public async createSession(opts: ICreateSessionOptions): Promise<void> {
+  public async createSession(): Promise<void> {
     if (this._connected) {
       throw new Error(ERROR_SESSION_CONNECTED);
     }
@@ -411,7 +414,6 @@ class Connector implements IConnector {
         {
           peerId: this.clientId,
           peerMeta: this.clientMeta,
-          chain: opts.chain,
         },
       ],
     });
@@ -434,14 +436,12 @@ class Connector implements IConnector {
       throw new Error(ERROR_SESSION_CONNECTED);
     }
 
-    this.chain = sessionStatus.chain;
     this.network = sessionStatus.network;
     this.rpcUrl = sessionStatus.rpcUrl || "";
     this.accounts = sessionStatus.accounts;
 
     const sessionParams: ISessionParams = {
       approved: true,
-      chain: this.chain,
       network: this.network,
       rpcUrl: this.rpcUrl,
       accounts: this.accounts,
@@ -508,7 +508,6 @@ class Connector implements IConnector {
 
     const sessionParams: ISessionParams = {
       approved: true,
-      chain: this.chain,
       network: this.network,
       rpcUrl: this.rpcUrl,
       accounts: this.accounts,
@@ -542,7 +541,6 @@ class Connector implements IConnector {
 
     const sessionParams: ISessionParams = {
       approved: false,
-      chain: "",
       network: "",
       accounts: [],
       rpcUrl: "",
@@ -560,7 +558,7 @@ class Connector implements IConnector {
     this._handleSessionDisconnect(message);
   }
 
-  public async createInstantRequest(opts: ICreateSessionOptions, instantRequest: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<void> {
+  public async createInstantRequest(instantRequest: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<void> {
     this._key = await this._generateKey();
 
     const request: IJsonRpcRequest = this._formatRequest({
@@ -569,7 +567,6 @@ class Connector implements IConnector {
         {
           peerId: this.clientId,
           peerMeta: this.clientMeta,
-          chain: opts.chain,
           request: this._formatRequest(instantRequest),
         },
       ],
@@ -769,7 +766,6 @@ class Connector implements IConnector {
         if (!this._connected) {
           this._connected = true;
 
-          this.chain = sessionParams.chain;
           this.network = sessionParams.network;
           this.rpcUrl = sessionParams.rpcUrl;
           this.accounts = sessionParams.accounts;
@@ -962,7 +958,8 @@ class Connector implements IConnector {
     const version = this.version;
     const bridge = encodeURIComponent(this.bridge);
     const key = this.key;
-    const uri = `${protocol}:${handshakeTopic}@${version}?bridge=${bridge}&key=${key}`;
+    const chain = this.chain;
+    const uri = `${protocol}:${handshakeTopic}@${version}?bridge=${bridge}&key=${key}&chain=${chain}`;
     return uri;
   }
 
@@ -981,11 +978,16 @@ class Connector implements IConnector {
       const bridge = decodeURIComponent(result.bridge);
 
       if (!result.key) {
-        throw Error("Invalid or missing kkey parameter value");
+        throw Error("Invalid or missing key parameter value");
       }
       const key = result.key;
 
-      return { handshakeTopic, bridge, key };
+      if (!result.chain) {
+        throw Error("Invalid or missing chain parameter value");
+      }
+      const chain = result.chain;
+
+      return { handshakeTopic, bridge, key, chain };
     } else {
       throw new Error(ERROR_INVALID_URI);
     }

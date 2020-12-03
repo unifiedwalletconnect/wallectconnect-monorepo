@@ -18,13 +18,13 @@ declare module "@unifiedwalletconnect/types" {
     session: IWalletConnectSession;
 
     on(event: string, callback: (error: Error | null, payload: any | null) => void): void;
-    connect(opts: ICreateSessionOptions): Promise<ISessionStatus>;
-    createSession(opts: ICreateSessionOptions): Promise<void>;
+    connect(): Promise<ISessionStatus>;
+    createSession(): Promise<void>;
     approveSession(sessionStatus: ISessionStatus): void;
     rejectSession(sessionError?: ISessionError): void;
     updateSession(sessionStatus: ISessionStatus): void;
     killSession(sessionError?: ISessionError): Promise<void>;
-    createInstantRequest(opts: ICreateSessionOptions, request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
+    createInstantRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
 
     sendCustomRequest(request: Partial<IJsonRpcRequest>, options?: IRequestOptions): Promise<any>;
     unsafeSend(
@@ -99,7 +99,6 @@ declare module "@unifiedwalletconnect/types" {
   }
 
   export interface ISessionStatus {
-    chain: string;
     network: string;
     rpcUrl?: string;
     accounts: string[];
@@ -171,6 +170,7 @@ declare module "@unifiedwalletconnect/types" {
   export interface IQueryParamsResult {
     bridge: string;
     key: string;
+    chain: string;
   }
 
   export interface IParseURIResult {
@@ -179,11 +179,11 @@ declare module "@unifiedwalletconnect/types" {
     version: number;
     bridge: string;
     key: string;
+    chain: string;
   }
 
   export interface ISessionParams {
     approved: boolean;
-    chain: string;
     network: string;
     rpcUrl: string;
     accounts: string[];
@@ -208,6 +208,7 @@ declare module "@unifiedwalletconnect/types" {
   }
 
   export interface IWalletConnectOptions {
+    chain?: string;
     bridge?: string;
     uri?: string;
     session?: IWalletConnectSession;
@@ -249,10 +250,6 @@ declare module "@unifiedwalletconnect/types" {
 
   export interface IInternalRequestOptions extends IRequestOptions {
     topic: string;
-  }
-
-  export interface ICreateSessionOptions {
-    chain: string;
   }
 
   export interface IQRCodeModal {

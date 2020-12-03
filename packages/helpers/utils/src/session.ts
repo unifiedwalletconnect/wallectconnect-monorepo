@@ -42,6 +42,7 @@ export function parseWalletConnectUri(str: string): IParseURIResult {
     const parameters: IQueryParamsResult = {
       key: result.key || "",
       bridge: result.bridge || "",
+      chain: result.chain || "",
     };
 
     return parameters;
